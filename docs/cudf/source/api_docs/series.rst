@@ -212,6 +212,7 @@ Reshaping, sorting
    Series.explode
    Series.searchsorted
    Series.repeat
+   Series.unstack
    Series.transpose
 
 Combining / comparing / joining / merging

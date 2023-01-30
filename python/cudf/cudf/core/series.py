@@ -611,6 +611,100 @@ class Series(SingleColumnFrame, IndexedFrame, Serializable):
         """
         return cls(s, nan_as_null=nan_as_null)
 
+    @_cudf_nvtx_annotate
+    def unstack(self, level=-1, fill_value=None):
+        """
+        Pivot one or more levels of the (necessarily hierarchical) index labels.
+
+        Pivots the specified levels of the index labels of df to the innermost
+        levels of the columns labels of the result.
+
+        * If the index of ``df`` has multiple levels, returns a ``Dataframe`` with
+        specified level of the index pivoted to the column levels.
+        * If the index of ``df`` has single level, returns a ``Series`` with all
+        column levels pivoted to the index levels.
+
+        Parameters
+        ----------
+        df : DataFrame
+        level : level name or index, list-like
+            Integer, name or list of such, specifying one or more
+            levels of the index to pivot
+        fill_value
+            Non-functional argument provided for compatibility with Pandas.
+
+        Returns
+        -------
+        Series or DataFrame
+
+        Examples
+        --------
+        >>> df = cudf.DataFrame()
+        >>> df['a'] = [1, 1, 1, 2, 2]
+        >>> df['b'] = [1, 2, 3, 1, 2]
+        >>> df['c'] = [5, 6, 7, 8, 9]
+        >>> df['d'] = ['a', 'b', 'a', 'd', 'e']
+        >>> df = df.set_index(['a', 'b', 'd'])
+        >>> df
+            c
+        a b d
+        1 1 a  5
+        2 b  6
+        3 a  7
+        2 1 d  8
+        2 e  9
+
+        Unstacking level 'a':
+
+        >>> df.unstack('a')
+                c
+        a       1     2
+        b d
+        1 a     5  <NA>
+        d  <NA>     8
+        2 b     6  <NA>
+        e  <NA>     9
+        3 a     7  <NA>
+
+        Unstacking level 'd' :
+
+        >>> df.unstack('d')
+                c
+        d       a     b     d     e
+        a b
+        1 1     5  <NA>  <NA>  <NA>
+        2  <NA>     6  <NA>  <NA>
+        3     7  <NA>  <NA>  <NA>
+        2 1  <NA>  <NA>     8  <NA>
+        2  <NA>  <NA>  <NA>     9
+
+        Unstacking multiple levels:
+
+        >>> df.unstack(['b', 'd'])
+            c
+        b     1           2           3
+        d     a     d     b     e     a
+        a
+        1     5  <NA>     6  <NA>     7
+        2  <NA>     8  <NA>     9  <NA>
+
+        Unstacking single level index dataframe:
+
+        >>> df = cudf.DataFrame({('c', 1): [1, 2, 3], ('c', 2):[9, 8, 7]})
+        >>> df.unstack()
+        c  1  0    1
+            1    2
+            2    3
+        2  0    9
+            1    8
+            2    7
+        dtype: int64
+        """
+        data: cudf.DataFrame = cudf.DataFrame(self)
+        return cudf.core.reshape.unstack(
+            data, level=level, fill_value=fill_value
+        )
+
     @property  # type: ignore
     @_cudf_nvtx_annotate
     def dt(self):
